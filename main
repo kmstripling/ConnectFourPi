@@ -1,0 +1,158 @@
+import C4Board
+import C4Display
+import math
+
+def main():
+
+    display = C4Display.C4Display()
+    buttonB, buttonA = display.getButtonInput()
+    ai_depth = 3
+    ai_flg = 0
+
+    while True:
+
+        players_turn = 1
+        winning_player = 0
+        winning_play = []
+
+        board = C4Board.Board()
+        display.setBoard(board.board)
+        display.printPiBoard(winning_player, winning_play)
+        
+        display.clearScreen()
+        display.show("Welcome to", 0)
+        display.show("ConnectFourPi", 1)
+
+        display.show("[A] for 2 Players", 3)
+        display.show("[B] to Play AI", 4)
+
+        while True:
+            if buttonA.value and not buttonB.value:
+                ai_flg = 0
+                break
+
+            elif buttonB.value and not buttonA.value:
+                ai_flg = 1
+
+                display.clearScreen()
+                display.show("Choose AI Level: " + str(ai_depth - 2), 0)
+                display.show("[A] to change Level", 2)
+                display.show("[B] to select", 3)
+
+                while True:
+
+                    if buttonA.value and not buttonB.value:
+                        ai_depth = ai_depth + 1
+
+                        if ai_depth > 6:
+                            ai_depth = 3
+
+                        display.clearScreen()
+                        display.show("Choose AI Level: " + str(ai_depth - 2), 0)
+                        display.show("[A] to change Level", 2)
+                        display.show("[B] to select", 3)
+
+                    elif buttonB.value and not buttonA.value:
+                        break
+
+                break
+
+        while (winning_player <= 0 and len(board.valid_locations()) != 0):
+
+            board.print()
+            display.printPiBoard(winning_player, winning_play)
+            display.clearScreen()
+
+            if players_turn == 1:
+                display.show("Player 1's Turn", 0)
+                players_input = display.chooseColumn(players_turn)
+
+            elif ai_flg:
+                display.show("AI Level " + str(ai_depth - 2), 0)
+                display.show(" ... is thinking ...", 1)
+
+                child, value = alphabeta(board, ai_depth, -math.inf, math.inf, True)
+                players_input = board.compare(child)
+
+            else:
+                display.show("Player 2's Turn", 0)
+                players_input = display.chooseColumn(players_turn)
+
+            play_result = board.add_chip(players_input, players_turn)
+
+            #Toggle the current player
+            if (play_result == 1):
+                if (players_turn == 1):
+                    players_turn = 2
+
+                else:
+                    players_turn = 1
+
+            else:
+                print("Play was invalid. Try again.")
+
+            winning_player, winning_play = board.evaluate()
+
+        display.clearScreen()
+        display.printPiBoard(winning_player, winning_play)
+
+        if (winning_player == 0):
+            print("\nIt's a tie!")
+            display.show("It's a tie!", 0)
+        if winning_player == 2 and ai_flg == 1:
+            print("\nAI Level " + str(ai_depth - 2) + " wins!")
+            display.show("AI Level " + str(ai_depth - 2) + " wins!", 0)
+        else:
+            print("\nPlayer", winning_player, "wins!")
+            display.show("Player " + str(winning_player) + " wins!", 0)
+
+        print(winning_play)
+        board.print()
+        del board
+
+        display.show("Press [A] button.", 3)
+
+        while True:
+            if buttonA.value and not buttonB.value:
+                break
+
+def alphabeta(board, depth, alpha, beta, maxmizingPlayer):
+
+    if depth == 0 or is_terminal_node(board):
+            return board, board.score()
+
+    if maxmizingPlayer:
+        value = -math.inf
+        children = board.child_nodes(2)
+        favorite_child = children[0]
+        for child in children:
+            new_value = alphabeta(child, depth - 1, alpha, beta, False)[1]
+            if new_value > value:
+                value = new_value
+                favorite_child = child
+            alpha = max(alpha, value)
+            if alpha >= beta:
+                break
+
+        return favorite_child, value
+
+    else:
+        value = math.inf
+        children = board.child_nodes(1)
+        favorite_child = children[0]
+        for child in children:
+            new_value = alphabeta(child, depth - 1, alpha, beta, True)[1]
+            if new_value < value:
+                value = new_value
+                favorite_child = child
+            beta = min(beta, value)
+            if beta <= alpha:
+                break
+
+        return favorite_child, value
+
+def is_terminal_node(board):
+    return board.evaluate()[0] != 0 or len(board.valid_locations()) == 0
+
+if __name__ == '__main__':
+    main()
